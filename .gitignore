@@ -1,0 +1,9 @@
+/testdirs
+
+# Developer tools
+.svn
+.idea
+.directory
+.vscode
+.history
+.DS_Store
