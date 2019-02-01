@@ -4,8 +4,8 @@ import (
     "os"
     "io/ioutil"
     "log"
-    "fmt"
     "path/filepath"
+    "github.com/davecgh/go-spew/spew"
 )
 
 
@@ -61,8 +61,8 @@ func (tree *Tree) Resolve() {
 
     queue = append(queue, tree.Root)
     for _, element := range queue {
-      children := element.GetChildren()
-      queue = append(queue, children...)
+        children := element.GetChildren()
+        queue = append(queue, children...)
     }
 }
 
@@ -107,5 +107,5 @@ func (dir *Dir) GetChildren() []TreeItem {
 func main() {
     t := Tree{}
     t.Resolve()
-    fmt.Printf("%v", t)
+    spew.Printf("%v", t)
 }

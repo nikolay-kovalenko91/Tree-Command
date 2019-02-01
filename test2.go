@@ -5,13 +5,30 @@ import (
     "io/ioutil"
     "log"
     "path/filepath"
+    "github.com/davecgh/go-spew/spew"
     "fmt"
+    "io"
+    "strings"
+)
+
+// Todo: -f flag
+// Todo: 'empty' size if a file is empty
+// Todo: passing tests
+// Todo: refactor it all to packages
+// Todo: sorting filenames in dirs
+// HELP HERE: https://github.com/KyleBanks/depth
+
+const (
+	outputPadding    = "│	"
+	outputPrefix     = "├───"
+	outputPrefixLast = "└───"
 )
 
 
 type TreeItem interface {
-    IsDir() bool
     Resolve()
+    ToString() string
+    GetChildren() []TreeItem
 }
 
 
@@ -24,24 +41,26 @@ type Properties struct {
 
 
 type File struct {
+    Size int64
+
     Properties
 }
 
-func (f *File) IsDir() bool {
-    return false
+func (f *File) Resolve() {}
+
+func (f *File) ToString() string {
+    return fmt.Sprintf("%s (%db)", f.Properties.Name, f.Size)
 }
 
-func (f *File) Resolve() {}
+func (f *File) GetChildren() []TreeItem {
+    return []TreeItem{}
+}
 
 
 type Dir struct {
     Properties
 
     ContentItems []TreeItem
-}
-
-func (f *Dir) IsDir() bool {
-    return true
 }
 
 
@@ -60,6 +79,7 @@ func (dir *Dir) AddContentItems(files []os.FileInfo) {
             }
         } else {
             item = &File {
+                Size: file.Size(),
                 Properties: Properties{
                     Name: name,
                     Path: path,
@@ -81,7 +101,15 @@ func (dir *Dir) Resolve() {
     }
 
     dir.AddContentItems(files)
-    // TODO: sort.Sort(byInternalAndName(p.Deps))
+    // sort.Sort(byInternalAndName(p.Deps))
+}
+
+func (dir *Dir) ToString() string {
+    return dir.Properties.Name
+}
+
+func (dir *Dir) GetChildren() []TreeItem {
+    return dir.ContentItems
 }
 
 
@@ -105,10 +133,30 @@ func (tree *Tree) Resolve() {
     tree.Root.Resolve()
 }
 
+func OutputTree(writer io.Writer, file TreeItem, indentCount int, isLast bool) {
+
+    indentSubstring := strings.Repeat(outputPadding, indentCount)
+    prefixSubstring := outputPrefix
+    if isLast {
+        prefixSubstring = outputPrefixLast
+    }
+
+    _, err := fmt.Fprintf(writer, "%s%s%s\n", indentSubstring, prefixSubstring, file.ToString())
+    if err != nil {
+		log.Printf("Can not output the data: %s", err)
+	}
+
+    for index, item := range(file.GetChildren()) {
+        itemIsLast := index == len(item.GetChildren()) - 1
+	    OutputTree(writer, item, indentCount + 1, itemIsLast)
+	}
+}
 
 
-func main() {
+func main() {`
     t := Tree{}
     t.Resolve()
-    fmt.Printf("%v", t)
+    spew.Printf("%v\n\n\n", t)
+
+    OutputTree(os.Stdout, t.Root, 0, false)
 }
