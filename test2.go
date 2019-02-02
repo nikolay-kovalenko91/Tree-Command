@@ -1,162 +1,168 @@
 package main
 
 import (
-    "os"
-    "io/ioutil"
-    "log"
-    "path/filepath"
-    "github.com/davecgh/go-spew/spew"
-    "fmt"
-    "io"
-    "strings"
+	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 )
 
+// Todo: fix root folder showing
 // Todo: -f flag
-// Todo: 'empty' size if a file is empty
 // Todo: passing tests
-// Todo: refactor it all to packages
 // Todo: sorting filenames in dirs
+// Todo: refactor it all to packages
+
 // HELP HERE: https://github.com/KyleBanks/depth
 
 const (
-	outputPadding    = "│	"
-	outputPrefix     = "├───"
-	outputPrefixLast = "└───"
+	outputPadding     = "│	"
+	outputPaddingLast = "	"
+	outputPrefix      = "├───"
+	outputPrefixLast  = "└───"
 )
 
-
 type TreeItem interface {
-    Resolve()
-    ToString() string
-    GetChildren() []TreeItem
+	Resolve()
+	ToString() string
+	GetChildren() []TreeItem
 }
-
 
 type Properties struct {
-    Name string
-    Path string
+	Name string
+	Path string
 
-    Parent *Dir
+	Parent *Dir
 }
 
-
 type File struct {
-    Size int64
+	Size int64
 
-    Properties
+	Properties
 }
 
 func (f *File) Resolve() {}
 
 func (f *File) ToString() string {
-    return fmt.Sprintf("%s (%db)", f.Properties.Name, f.Size)
+	fSize := f.Size
+	sizeSubstring := fmt.Sprintf("%db", fSize)
+	if fSize == 0 {
+		sizeSubstring = "empty"
+	}
+
+	return fmt.Sprintf("%s (%s)", f.Properties.Name, sizeSubstring)
 }
 
 func (f *File) GetChildren() []TreeItem {
-    return []TreeItem{}
+	return []TreeItem{}
 }
-
 
 type Dir struct {
-    Properties
+	Properties
 
-    ContentItems []TreeItem
+	ContentItems []TreeItem
 }
 
-
 func (dir *Dir) AddContentItems(files []os.FileInfo) {
-    for _, file := range files {
-        var item TreeItem
-        path := filepath.Join(dir.Path, file.Name())
-        name := file.Name()
-        if file.IsDir() {
-            item = &Dir {
-                Properties: Properties {
-                    Name: name,
-                    Path: path,
-                    Parent: dir,
-                },
-            }
-        } else {
-            item = &File {
-                Size: file.Size(),
-                Properties: Properties{
-                    Name: name,
-                    Path: path,
-                },
-            }
-        }
+	for _, file := range files {
+		var item TreeItem
+		path := filepath.Join(dir.Path, file.Name())
+		name := file.Name()
+		if file.IsDir() {
+			item = &Dir{
+				Properties: Properties{
+					Name:   name,
+					Path:   path,
+					Parent: dir,
+				},
+			}
+		} else {
+			item = &File{
+				Size: file.Size(),
+				Properties: Properties{
+					Name: name,
+					Path: path,
+				},
+			}
+		}
 
-        item.Resolve()
+		item.Resolve()
 
-        dir.ContentItems = append(dir.ContentItems, item)
-    }
+		dir.ContentItems = append(dir.ContentItems, item)
+	}
 }
 
 func (dir *Dir) Resolve() {
-    path := dir.Path
-    files, err := ioutil.ReadDir(path)
-    if err != nil {
-        log.Printf("Error occured reading %s: %s", path, err)
-    }
+	path := dir.Path
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		log.Printf("Error occured reading %s: %s", path, err)
+	}
 
-    dir.AddContentItems(files)
-    // sort.Sort(byInternalAndName(p.Deps))
+	dir.AddContentItems(files)
+	// sort.Sort(byInternalAndName(p.Deps))
 }
 
 func (dir *Dir) ToString() string {
-    return dir.Properties.Name
+	return dir.Properties.Name
 }
 
 func (dir *Dir) GetChildren() []TreeItem {
-    return dir.ContentItems
+	return dir.ContentItems
 }
 
-
 type Tree struct {
-    Root *Dir
+	Root *Dir
 
-    IncludeFiles bool
+	IncludeFiles bool
 }
 
 func (tree *Tree) Resolve() {
-    pwd, err := os.Getwd()
-    if err != nil {
+	pwd, err := os.Getwd()
+	if err != nil {
 		log.Printf("Error occured reading %s: %s", pwd, err)
 	}
 
-    tree.Root = &Dir {
-        Properties: Properties {
-            Path: pwd,
-        },
-    }
-    tree.Root.Resolve()
+	tree.Root = &Dir{
+		Properties: Properties{
+			Name: ".",
+			Path: pwd,
+		},
+	}
+	tree.Root.Resolve()
 }
 
-func OutputTree(writer io.Writer, file TreeItem, indentCount int, isLast bool) {
+func OutputTree(writer io.Writer, file TreeItem, parentIndent string, isLast bool, parentIsLast bool) {
 
-    indentSubstring := strings.Repeat(outputPadding, indentCount)
-    prefixSubstring := outputPrefix
-    if isLast {
-        prefixSubstring = outputPrefixLast
-    }
+	indentSubstring := fmt.Sprintf("%s%s", parentIndent, outputPadding)
+	if parentIsLast {
+		indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPaddingLast)
+	}
 
-    _, err := fmt.Fprintf(writer, "%s%s%s\n", indentSubstring, prefixSubstring, file.ToString())
-    if err != nil {
+	prefixSubstring := outputPrefix
+	if isLast {
+		prefixSubstring = outputPrefixLast
+	}
+
+	_, err := fmt.Fprintf(writer, "%s%s%s\n", indentSubstring, prefixSubstring, file.ToString())
+	if err != nil {
 		log.Printf("Can not output the data: %s", err)
 	}
 
-    for index, item := range(file.GetChildren()) {
-        itemIsLast := index == len(item.GetChildren()) - 1
-	    OutputTree(writer, item, indentCount + 1, itemIsLast)
+	fileChildren := file.GetChildren()
+	for index, item := range fileChildren {
+		itemIsLast := index == len(fileChildren)-1
+		OutputTree(writer, item, indentSubstring, itemIsLast, isLast)
 	}
 }
 
+func main() {
+	t := Tree{}
+	t.Resolve()
+	OutputTree(os.Stdout, t.Root, "", false, false)
 
-func main() {`
-    t := Tree{}
-    t.Resolve()
-    spew.Printf("%v\n\n\n", t)
-
-    OutputTree(os.Stdout, t.Root, 0, false)
+	spew.Printf("%v\n\n\n", t)
 }
