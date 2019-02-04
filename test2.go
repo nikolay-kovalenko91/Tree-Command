@@ -2,16 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"flag"
 )
 
 // Todo: fix root folder showing
-// Todo: -f flag
 // Todo: passing tests
 // Todo: sorting filenames in dirs
 // Todo: refactor it all to packages
@@ -26,7 +25,7 @@ const (
 )
 
 type TreeItem interface {
-	Resolve()
+	Resolve(bool)
 	ToString() string
 	GetChildren() []TreeItem
 }
@@ -44,7 +43,7 @@ type File struct {
 	Properties
 }
 
-func (f *File) Resolve() {}
+func (f *File) Resolve(_ bool) {}
 
 func (f *File) ToString() string {
 	fSize := f.Size
@@ -66,7 +65,7 @@ type Dir struct {
 	ContentItems []TreeItem
 }
 
-func (dir *Dir) AddContentItems(files []os.FileInfo) {
+func (dir *Dir) AddContentItems(files []os.FileInfo, includeFiles bool) {
 	for _, file := range files {
 		var item TreeItem
 		path := filepath.Join(dir.Path, file.Name())
@@ -80,29 +79,33 @@ func (dir *Dir) AddContentItems(files []os.FileInfo) {
 				},
 			}
 		} else {
-			item = &File{
-				Size: file.Size(),
-				Properties: Properties{
-					Name: name,
-					Path: path,
-				},
-			}
+		    if !includeFiles {
+		        continue
+		    }
+
+            item = &File{
+                Size: file.Size(),
+                Properties: Properties{
+                    Name: name,
+                    Path: path,
+                },
+            }
 		}
 
-		item.Resolve()
+		item.Resolve(includeFiles)
 
 		dir.ContentItems = append(dir.ContentItems, item)
 	}
 }
 
-func (dir *Dir) Resolve() {
+func (dir *Dir) Resolve(includeFiles bool) {
 	path := dir.Path
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Printf("Error occured reading %s: %s", path, err)
 	}
 
-	dir.AddContentItems(files)
+	dir.AddContentItems(files, includeFiles)
 	// sort.Sort(byInternalAndName(p.Deps))
 }
 
@@ -116,23 +119,19 @@ func (dir *Dir) GetChildren() []TreeItem {
 
 type Tree struct {
 	Root *Dir
+	Pwd string
 
 	IncludeFiles bool
 }
 
 func (tree *Tree) Resolve() {
-	pwd, err := os.Getwd()
-	if err != nil {
-		log.Printf("Error occured reading %s: %s", pwd, err)
-	}
-
 	tree.Root = &Dir{
 		Properties: Properties{
 			Name: ".",
-			Path: pwd,
+			Path: tree.Pwd,
 		},
 	}
-	tree.Root.Resolve()
+	tree.Root.Resolve(tree.IncludeFiles)
 }
 
 func OutputTree(writer io.Writer, file TreeItem, parentIndent string, isLast bool, parentIsLast bool) {
@@ -154,15 +153,41 @@ func OutputTree(writer io.Writer, file TreeItem, parentIndent string, isLast boo
 
 	fileChildren := file.GetChildren()
 	for index, item := range fileChildren {
-		itemIsLast := index == len(fileChildren)-1
+		itemIsLast := index == len(fileChildren) - 1
 		OutputTree(writer, item, indentSubstring, itemIsLast, isLast)
 	}
 }
 
-func main() {
-	t := Tree{}
-	t.Resolve()
-	OutputTree(os.Stdout, t.Root, "", false, false)
+func initTree() *Tree {
+    var tree Tree
+    flag.BoolVar(&tree.IncludeFiles, "f", false, "Set it if files should be included too")
 
-	spew.Printf("%v\n\n\n", t)
+    flag.Parse()
+
+    tail := flag.Args()
+    var (
+        pwd string
+        err error
+    )
+    if len(tail) > 0 {
+        pwd, err = filepath.Abs(tail[0])
+        if err != nil {
+            log.Fatal(err)
+        }
+    } else {
+    	pwd, err = os.Getwd()
+        if err != nil {
+            log.Fatal(err)
+        }
+    }
+    tree.Pwd = pwd
+
+    return &tree
+}
+
+func main() {
+	t := initTree()
+	t.Resolve()
+
+	OutputTree(os.Stdout, t.Root, "", false, false)
 }
