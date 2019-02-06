@@ -1,9 +1,8 @@
 package tree
 
-
 type Tree struct {
 	Root *Dir
-	Pwd string
+	Pwd  string
 
 	IncludeFiles bool
 }
@@ -27,6 +26,4 @@ type TreeItem interface {
 type Properties struct {
 	Name string
 	Path string
-
-	Parent *Dir
 }

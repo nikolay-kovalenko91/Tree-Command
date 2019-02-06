@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 )
 
-
 type Dir struct {
 	Properties
 
@@ -22,23 +21,22 @@ func (dir *Dir) AddContentItems(files []os.FileInfo, includeFiles bool) {
 		if file.IsDir() {
 			item = &Dir{
 				Properties: Properties{
-					Name:   name,
-					Path:   path,
-					Parent: dir,
+					Name: name,
+					Path: path,
 				},
 			}
 		} else {
-		    if !includeFiles {
-		        continue
-		    }
+			if !includeFiles {
+				continue
+			}
 
-            item = &File{
-                Size: file.Size(),
-                Properties: Properties{
-                    Name: name,
-                    Path: path,
-                },
-            }
+			item = &File{
+				Size: file.Size(),
+				Properties: Properties{
+					Name: name,
+					Path: path,
+				},
+			}
 		}
 
 		item.Resolve(includeFiles)
