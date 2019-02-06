@@ -16,15 +16,14 @@ type Dir struct {
 func (dir *Dir) AddContentItems(files []os.FileInfo, includeFiles bool) {
 	for _, file := range files {
 		var item TreeItem
-		path := filepath.Join(dir.Path, file.Name())
-		name := file.Name()
+		properties := Properties{
+			Name: file.Name(),
+			Path: filepath.Join(dir.Path, file.Name()),
+			Parent: dir,
+		}
+
 		if file.IsDir() {
-			item = &Dir{
-				Properties: Properties{
-					Name: name,
-					Path: path,
-				},
-			}
+			item = &Dir{Properties: properties}
 		} else {
 			if !includeFiles {
 				continue
@@ -32,10 +31,7 @@ func (dir *Dir) AddContentItems(files []os.FileInfo, includeFiles bool) {
 
 			item = &File{
 				Size: file.Size(),
-				Properties: Properties{
-					Name: name,
-					Path: path,
-				},
+				Properties: properties,
 			}
 		}
 
@@ -53,7 +49,6 @@ func (dir *Dir) Resolve(includeFiles bool) {
 	}
 
 	dir.AddContentItems(files, includeFiles)
-	// sort.Sort(byInternalAndName(p.Deps))
 }
 
 func (dir *Dir) ToString() string {

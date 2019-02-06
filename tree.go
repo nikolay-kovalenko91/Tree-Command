@@ -10,7 +10,6 @@ type Tree struct {
 func (tree *Tree) Resolve() {
 	tree.Root = &Dir{
 		Properties: Properties{
-			Name: ".",
 			Path: tree.Pwd,
 		},
 	}
@@ -21,9 +20,5 @@ type TreeItem interface {
 	Resolve(bool)
 	ToString() string
 	GetChildren() []TreeItem
-}
-
-type Properties struct {
-	Name string
-	Path string
+	HasRootParent() bool
 }

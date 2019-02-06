@@ -10,9 +10,6 @@ import (
 	"../../../tree" // fixme: will fixed for new repo
 )
 
-// Todo: sorting filenames in dirs
-// Todo: fix root folder showing
-// Todo: passing tests
 
 const (
 	outputPadding     = "│	"
@@ -21,11 +18,22 @@ const (
 	outputPrefixLast  = "└───"
 )
 
+func outputChildrenTree(writer io.Writer, file tree.TreeItem, indentSubstring string, isLast bool) {
+    fileChildren := file.GetChildren()
+	for index, item := range fileChildren {
+		itemIsLast := index == len(fileChildren) - 1
+		outputTree(writer, item, indentSubstring, itemIsLast, isLast)
+	}
+}
+
 func outputTree(writer io.Writer, file tree.TreeItem, parentIndent string, isLast bool, parentIsLast bool) {
 
-	indentSubstring := fmt.Sprintf("%s%s", parentIndent, outputPadding)
-	if parentIsLast {
-		indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPaddingLast)
+	var indentSubstring string
+    if !file.HasRootParent() {
+        indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPadding)
+        if parentIsLast {
+            indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPaddingLast)
+        }
 	}
 
 	prefixSubstring := outputPrefix
@@ -38,11 +46,7 @@ func outputTree(writer io.Writer, file tree.TreeItem, parentIndent string, isLas
 		log.Printf("Can not output the data: %s", err)
 	}
 
-	fileChildren := file.GetChildren()
-	for index, item := range fileChildren {
-		itemIsLast := index == len(fileChildren) - 1
-		outputTree(writer, item, indentSubstring, itemIsLast, isLast)
-	}
+    outputChildrenTree(writer, file, indentSubstring, isLast)
 }
 
 func initTree() *tree.Tree {
@@ -76,5 +80,5 @@ func main() {
 	t := initTree()
 	t.Resolve()
 
-	outputTree(os.Stdout, t.Root, "", false, false)
+	outputChildrenTree(os.Stdout, t.Root, "", false)
 }
