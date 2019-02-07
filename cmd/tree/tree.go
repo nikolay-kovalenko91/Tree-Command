@@ -49,13 +49,15 @@ func outputTree(writer io.Writer, file tree.TreeItem, parentIndent string, isLas
     outputChildrenTree(writer, file, indentSubstring, isLast)
 }
 
-func initTree() *tree.Tree {
+func initTree(args []string) *tree.Tree {
     var t tree.Tree
-    flag.BoolVar(&t.IncludeFiles, "f", false, "Set it if files should be included too")
+    f := flag.NewFlagSet(args[0], flag.ExitOnError)
 
-    flag.Parse()
+    f.BoolVar(&t.IncludeFiles, "f", false, "Set it if files should be included too")
 
-    tail := flag.Args()
+    f.Parse(args[1:])
+
+    tail := f.Args()
     var (
         pwd string
         err error
@@ -76,9 +78,13 @@ func initTree() *tree.Tree {
     return &t
 }
 
-func main() {
-	t := initTree()
+func dirTree(writer io.Writer, args []string) {
+    t := initTree(os.Args)
 	t.Resolve()
 
-	outputChildrenTree(os.Stdout, t.Root, "", false)
+	outputChildrenTree(writer, t.Root, "", false)
+}
+
+func main() {
+    dirTree(os.Stdout, os.Args)
 }
