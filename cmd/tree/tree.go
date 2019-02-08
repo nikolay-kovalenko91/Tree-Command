@@ -7,9 +7,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"../../../tree" // fixme: will fixed for new repo
-)
 
+	"gitlab.com/nikolay-kov/gotests"
+)
 
 const (
 	outputPadding     = "│	"
@@ -19,9 +19,9 @@ const (
 )
 
 func outputChildrenTree(writer io.Writer, file tree.TreeItem, indentSubstring string, isLast bool) {
-    fileChildren := file.GetChildren()
+	fileChildren := file.GetChildren()
 	for index, item := range fileChildren {
-		itemIsLast := index == len(fileChildren) - 1
+		itemIsLast := index == len(fileChildren)-1
 		outputTree(writer, item, indentSubstring, itemIsLast, isLast)
 	}
 }
@@ -29,11 +29,11 @@ func outputChildrenTree(writer io.Writer, file tree.TreeItem, indentSubstring st
 func outputTree(writer io.Writer, file tree.TreeItem, parentIndent string, isLast bool, parentIsLast bool) {
 
 	var indentSubstring string
-    if !file.HasRootParent() {
-        indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPadding)
-        if parentIsLast {
-            indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPaddingLast)
-        }
+	if !file.HasRootParent() {
+		indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPadding)
+		if parentIsLast {
+			indentSubstring = fmt.Sprintf("%s%s", parentIndent, outputPaddingLast)
+		}
 	}
 
 	prefixSubstring := outputPrefix
@@ -46,45 +46,45 @@ func outputTree(writer io.Writer, file tree.TreeItem, parentIndent string, isLas
 		log.Printf("Can not output the data: %s", err)
 	}
 
-    outputChildrenTree(writer, file, indentSubstring, isLast)
+	outputChildrenTree(writer, file, indentSubstring, isLast)
 }
 
 func initTree(args []string) *tree.Tree {
-    var t tree.Tree
-    f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	var t tree.Tree
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
 
-    f.BoolVar(&t.IncludeFiles, "f", false, "Set it if files should be included too")
+	f.BoolVar(&t.IncludeFiles, "f", false, "Set it if files should be included too")
 
-    f.Parse(args[1:])
+	f.Parse(args[1:])
 
-    tail := f.Args()
-    var (
-        pwd string
-        err error
-    )
-    if len(tail) > 0 {
-        pwd, err = filepath.Abs(tail[0])
-        if err != nil {
-            log.Fatal(err)
-        }
-    } else {
-    	pwd, err = os.Getwd()
-        if err != nil {
-            log.Fatal(err)
-        }
-    }
-    t.Pwd = pwd
+	tail := f.Args()
+	var (
+		pwd string
+		err error
+	)
+	if len(tail) > 0 {
+		pwd, err = filepath.Abs(tail[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		pwd, err = os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	t.Pwd = pwd
 
-    return &t
+	return &t
 }
 
 func dirTree(writer io.Writer, args []string) {
-    t := initTree(os.Args)
+	t := initTree(args)
 	t.Resolve()
 
 	outputChildrenTree(writer, t.Root, "", false)
 }
 
 func main() {
-    dirTree(os.Stdout, os.Args)
+	dirTree(os.Stdout, os.Args)
 }
