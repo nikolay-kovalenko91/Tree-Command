@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/nikolay-kov/gotests"
+	"github.com/nikolay-kovalenko91/Tree-Command"
 )
 
 const (

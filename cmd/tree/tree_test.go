@@ -39,7 +39,7 @@ const fullTreeResult = `├───project
 func TestTreeShouldBeFull(t *testing.T) {
 	out := new(bytes.Buffer)
 
-	dirTree(out, []string{"./tree", "-f", "../../testdata"})
+	dirTree(out, []string{"./tree", "-f", "../../fixtures"})
 
 	result := out.String()
 	if result != fullTreeResult {
@@ -65,7 +65,7 @@ func TestTreeDir(t *testing.T) {
 
 	out := new(bytes.Buffer)
 
-	dirTree(out, []string{"./tree", "../../testdata"})
+	dirTree(out, []string{"./tree", "../../fixtures"})
 
 	result := out.String()
 	if result != dirTreeResult {
